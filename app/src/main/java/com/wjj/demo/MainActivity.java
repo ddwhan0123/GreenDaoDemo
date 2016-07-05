@@ -25,6 +25,11 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import de.greenrobot.dao.Property;
 import de.greenrobot.dao.query.Query;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -103,23 +108,52 @@ public class MainActivity extends AppCompatActivity {
 
     //增
     private void addPerson() {
-        LogUtils.d("---> addPerson ");
-        String age = inputAge.getText().toString().trim();
-        String name = inputName.getText().toString().trim();
-        String address = inputAddress.getText().toString().trim();
-        //判断不为空
-        if (address.length() > 0 && name.length() > 0 && age.length() > 0) {
-            inputAddress.setText("");
-            inputAge.setText("");
-            inputName.setText("");
+        Observable.create(new Observable.OnSubscribe<Person>() {
 
-            Person person = new Person(null, name, age, address);
-            getPersonDao().insert(person);
-            cursor.requery();
+            @Override
+            public void call(Subscriber<? super Person> subscriber) {
+                Person person = null;
+                String age = inputAge.getText().toString().trim();
+                String name = inputName.getText().toString().trim();
+                String address = inputAddress.getText().toString().trim();
+                //判断不为空
+                if (address.length() > 0 && name.length() > 0 && age.length() > 0) {
 
-        } else {
-            Toast.makeText(getApplicationContext(), "有一个/多个输入框里没东西", Toast.LENGTH_SHORT).show();
-        }
+
+                    person = new Person(null, name, age, address);
+                    getPersonDao().insert(person);
+                    cursor.requery();
+
+                } else {
+                    Toast.makeText(getApplicationContext(), "有一个/多个输入框里没东西", Toast.LENGTH_SHORT).show();
+                }
+                if (person != null) {
+                    subscriber.onNext(person);
+                } else {
+                    Observable.error(new NullPointerException("person为空"));
+                }
+
+                LogUtils.d("---> 新线程" + Thread.currentThread().getId());
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<Person>() {
+            @Override
+            public void onCompleted() {
+
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                LogUtils.e(e);
+            }
+
+            @Override
+            public void onNext(Person person) {
+                inputAddress.setText("");
+                inputAge.setText("");
+                inputName.setText("");
+                LogUtils.d("---> 主线程" + Thread.currentThread().getId());
+            }
+        });
     }
 
     //查

@@ -35,4 +35,6 @@ dependencies {
     compile 'org.greenrobot:greendao:2.2.1'
     compile 'com.jakewharton:butterknife:8.1.0'
     compile 'com.apkfuns.logutils:library:1.4.2'
+    compile 'io.reactivex:rxjava:1.1.5'
+    compile 'io.reactivex:rxandroid:1.2.0'
 }
