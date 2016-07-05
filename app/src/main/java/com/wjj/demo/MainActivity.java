@@ -29,6 +29,8 @@ import de.greenrobot.dao.query.Query;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
@@ -179,7 +181,6 @@ public class MainActivity extends AppCompatActivity {
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<String>() {
             @Override
             public void onCompleted() {
-                LogUtils.d("---> onCompleted");
                 adapter.notifyDataSetChanged();
             }
 
@@ -234,20 +235,41 @@ public class MainActivity extends AppCompatActivity {
 
     //删
     private void deletePerson(long value) {
-        LogUtils.d("---> deletePerson value = " + value);
-        getPersonDao().deleteByKey(value);
-        deleteIdTv.setText("");
+        Observable.just(value).subscribeOn(Schedulers.io()).map(new Func1<Long, Long>() {
+            @Override
+            public Long call(Long aLong) {
+                getPersonDao().deleteByKey(aLong);
+                return aLong;
+            }
+        }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Action1<Long>() {
+            @Override
+            public void call(Long aLong) {
+                deleteIdTv.setText("");
+            }
+        });
+
+
     }
 
     //改
     private void editPerson(String age) {
-        LogUtils.d("---> editPerson");
-        Person person = new Person();
-        person.setAddress("suzhou");
-        person.setAge(age);
-        person.setName("kobe");
-        person.setId(2l);
-        getPersonDao().update(person);
+        Observable.just(age).subscribeOn(Schedulers.io()).map(new Func1<String, Person>() {
+            @Override
+            public Person call(String s) {
+                Person person = new Person();
+                person.setAddress("suzhou");
+                person.setAge(s);
+                person.setName("kobe");
+                person.setId(3l);
+                getPersonDao().update(person);
+                return person;
+            }
+        }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Action1<Person>() {
+            @Override
+            public void call(Person person) {
+                LogUtils.d(person);
+            }
+        });
     }
 
 }
