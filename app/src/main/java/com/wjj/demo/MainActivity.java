@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -28,7 +29,6 @@ import de.greenrobot.dao.query.Query;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
@@ -118,8 +118,6 @@ public class MainActivity extends AppCompatActivity {
                 String address = inputAddress.getText().toString().trim();
                 //判断不为空
                 if (address.length() > 0 && name.length() > 0 && age.length() > 0) {
-
-
                     person = new Person(null, name, age, address);
                     getPersonDao().insert(person);
                     cursor.requery();
@@ -133,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
                     Observable.error(new NullPointerException("person为空"));
                 }
 
-                LogUtils.d("---> 新线程" + Thread.currentThread().getId());
+                LogUtils.d("---> add 新线程" + Thread.currentThread().getId());
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<Person>() {
             @Override
@@ -151,41 +149,52 @@ public class MainActivity extends AppCompatActivity {
                 inputAddress.setText("");
                 inputAge.setText("");
                 inputName.setText("");
-                LogUtils.d("---> 主线程" + Thread.currentThread().getId());
             }
         });
     }
 
     //查
     private void queryPerson() {
-        LogUtils.d("---> queryPerson ");
-        String age = inputAge.getText().toString().trim();
-        String name = inputName.getText().toString().trim();
-        String address = inputAddress.getText().toString().trim();
-        //判断是否有东西
-        if (name.length() > 0) {
-            LogUtils.d("---> name.length() > 0 ");
-            inputAge.setText("");
-            inputAddress.setText("");
-            queryLogic(name, 1);
+        Observable.create(new Observable.OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> subscriber) {
+                String age = inputAge.getText().toString().trim();
+                String name = inputName.getText().toString().trim();
+                String address = inputAddress.getText().toString().trim();
+                //判断是否有东西
+                if (name.length() > 0) {
+                    queryLogic(name, 1);
+                    subscriber.onNext(name);
+                } else if (age.length() > 0) {
+                    queryLogic(age, 3);
+                    subscriber.onNext(age);
+                } else if (address.length() > 0) {
+                    subscriber.onNext(address);
+                    queryLogic(address, 2);  // Query 类代表了一个可以被重复执行的查询
+                } else {
+                    LogUtils.d("有一个/多个输入框里没东西");
+                }
+                subscriber.onCompleted();
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<String>() {
+            @Override
+            public void onCompleted() {
+                LogUtils.d("---> onCompleted");
+                adapter.notifyDataSetChanged();
+            }
 
-        } else if (age.length() > 0) {
-            LogUtils.d("---> age.length() > 0 ");
-            inputName.setText("");
-            inputAddress.setText("");
+            @Override
+            public void onError(Throwable e) {
+                LogUtils.e(e);
+            }
 
-            queryLogic(age, 3);
-
-        } else if (address.length() > 0) {
-            LogUtils.d("---> address.length() > 0 ");
-            inputName.setText("");
-            inputAge.setText("");
-
-            queryLogic(address, 2);  // Query 类代表了一个可以被重复执行的查询
-
-        } else {
-            Toast.makeText(getApplicationContext(), "有一个/多个输入框里没东西", Toast.LENGTH_SHORT).show();
-        }
+            @Override
+            public void onNext(String s) {
+                inputAge.setText("");
+                inputAddress.setText("");
+                inputName.setText("");
+            }
+        });
     }
 
     private void queryLogic(String value, int type) {
@@ -206,8 +215,7 @@ public class MainActivity extends AppCompatActivity {
             // 查询结果以 List 返回
             List<Person> queryList = (List<Person>) query.list();
             list.addAll(queryList);
-            Toast.makeText(getApplicationContext(), "有" + queryList.size() + "个值", Toast.LENGTH_SHORT).show();
-            adapter.notifyDataSetChanged();
+            LogUtils.d("--->有" + queryList.size() + "个值");
         }
 
     }
