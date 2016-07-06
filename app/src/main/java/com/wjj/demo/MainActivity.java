@@ -9,7 +9,6 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 import com.apkfuns.logutils.LogUtils;
 import com.example.Person;
@@ -63,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+        //初始化游标
         cursor = getDb().query(getPersonDao().getTablename(), getPersonDao().getAllColumns(), null, null, null, null, null);
         list = new ArrayList<>();
         adapter = new PersonAdapter(MainActivity.this, list);
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
                 if (v.length() > 0) {
                     deletePerson(Long.parseLong(v));
                 } else {
-                    Toast.makeText(getApplicationContext(), "删除所需的TextView值为空", Toast.LENGTH_SHORT).show();
+                    LogUtils.e( "---> 删除所需的TextView值为空");
                 }
                 break;
             case R.id.edit:
@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
                     cursor.requery();
 
                 } else {
-                    Toast.makeText(getApplicationContext(), "有一个/多个输入框里没东西", Toast.LENGTH_SHORT).show();
+                    LogUtils.d("---> 有一个/多个输入框里没东西");
                 }
                 if (person != null) {
                     subscriber.onNext(person);
